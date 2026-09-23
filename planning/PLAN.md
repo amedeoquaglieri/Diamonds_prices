@@ -117,7 +117,7 @@ invariant it establishes (see "Testing" below); keep this list and
      cleaning rules, grade categoricals in worst→best order, every row
      banded, every band populated enough to stratify on.
 
-3. **Feature engineering** (`src/diamonds/features.py`)
+3. **Feature engineering** (`src/diamonds/features.py`) — done
    - Derive `log(carat)` and `log(price)`.
    - Ordinal-encode `cut`, `color`, `clarity` (worst→best); also build a
      one-hot-encoded variant of each for comparison against the ordinal
