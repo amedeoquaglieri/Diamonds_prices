@@ -186,10 +186,28 @@ invariant it establishes (see "Testing" below); keep this list and
    Implication for step 10: prefer the simpler OLS. Regularization earns
    nothing on this dataset.
 
-7. **Gradient-boosted trees**
-   - Fit XGBoost or LightGBM on `log(price)` with both feature-set variants.
-   - Compute feature importances and partial-dependence plots for
-     cut/color/clarity.
+7. **Gradient-boosted trees** — done
+   (`src/diamonds/models.py`, `src/diamonds/interpret.py`)
+   - Fit LightGBM on `log(price)` with both feature-set variants.
+   - Compute feature importances and partial dependence for
+     cut/color/clarity — trees have no coefficients to read, so
+     `interpret.partial_dependence` sweeps each grade worst-to-best,
+     holding everything else fixed, and reports the predicted price at each
+     level.
+   - Tests: predictions have the right shape, importances cover every
+     input feature and rank `log_carat` first, the GBM beats the OLS
+     baseline, every feature-set variant clears the accuracy floor, and
+     partial dependence is defined only for the ordinal encoding and comes
+     out monotonically increasing worst-to-best for all three grades — the
+     confound check restated for a model with no coefficients.
+
+   Result: LightGBM clearly out-predicts OLS — RMSE $529 vs $923, R²(log)
+   0.991 vs 0.979, on the carat+ordinal variant (its best; dimensions+
+   ordinal is a close second at $537). `log_carat` is the single most
+   important feature by a wide margin, matching every earlier step.
+   Partial dependence confirms the confound reversal holds without needing
+   a coefficient to read: predicted price rises strictly worst-to-best for
+   cut, color and clarity alike, holding carat and the other grades fixed.
 
 8. **Carat-bucketed comparison (sanity check)**
    - Compute mean price and price-per-carat by cut/color/clarity within each

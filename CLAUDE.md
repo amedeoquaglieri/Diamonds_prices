@@ -8,15 +8,16 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **build steps 1-6 of `planning/PLAN.md` are done** (project
+Current state: **build steps 1-7 of `planning/PLAN.md` are done** (project
 scaffold, data cleaning, feature engineering, train/test split, the OLS
-baseline and the regularized comparison). Remaining: gradient-boosted trees,
+baseline, the regularized comparison, and gradient-boosted trees). Remaining:
 the carat-bucketed comparison, evaluation and write-up.
 
-Two results so far that contradict the original plan, both explained in
+Three results so far that contradict the original plan, all explained in
 `planning/PLAN.md`: the controlled carat elasticity is 1.88 rather than the
-unconditional 1.68, and regularization gains nothing over plain OLS at this
-sample size.
+unconditional 1.68, regularization gains nothing over plain OLS at this
+sample size, and LightGBM clearly beats OLS (RMSE $529 vs $923) rather than
+just matching it.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.
@@ -28,8 +29,10 @@ sample size.
   `features.py` builds the feature-set variants (size: carat or x/y/z;
   grade encoding: ordinal or one-hot) and the log-price target; `split.py`
   holds the shared carat-band-stratified train/test split; `models.py` fits
-  estimators (paired with their feature variant via `Fitted`); `metrics.py`
-  scores predictions.
+  estimators (paired with their feature variant via `Fitted`), including
+  the LightGBM baseline; `metrics.py` scores predictions; `interpret.py`
+  computes partial dependence for the tree model, standing in for the
+  coefficients a linear model reads directly.
 - `tests/` — pytest suite, one module per source module.
 
 ## Commands

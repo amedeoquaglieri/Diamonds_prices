@@ -6,6 +6,7 @@ so scoring it on new rows cannot silently use a different feature set.
 
 from dataclasses import dataclass
 
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LassoCV, LinearRegression, RidgeCV
@@ -17,6 +18,7 @@ from diamonds.features import build_features, target
 RIDGE_ALPHAS = np.logspace(-3, 3, 13)
 CV_FOLDS = 5
 LASSO_MAX_ITER = 50_000
+GBM_PARAMS = {"random_state": 0, "verbosity": -1}
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,19 @@ class Fitted:
     def alpha(self) -> float:
         """The regularization strength chosen by cross-validation."""
         return self.estimator[-1].alpha_
+
+    def importances(self) -> pd.Series:
+        """Feature importances, sorted descending.
+
+        Unlike coefficients(), these carry no sign or unit: a tree's
+        importance is how often a feature is split on, not the direction or
+        size of its effect on price. Use interpret.partial_dependence for
+        that.
+        """
+        final = self.estimator[-1] if isinstance(self.estimator, Pipeline) else self.estimator
+        return pd.Series(
+            final.feature_importances_, index=self.estimator.feature_names_in_
+        ).sort_values(ascending=False)
 
 
 def fit_linear(
@@ -100,3 +115,20 @@ def fit_lasso(
         encoding,
         LassoCV(cv=CV_FOLDS, random_state=0, max_iter=LASSO_MAX_ITER),
     )
+
+
+def fit_gbm(
+    train: pd.DataFrame, size: str = "carat", encoding: str = "ordinal", **params
+) -> Fitted:
+    """Fit a gradient-boosted tree ensemble on log price.
+
+    Trees pick up the carat non-linearity and any grade interactions on
+    their own, without the log-carat transform or the ordinal-vs-one-hot
+    choice mattering the way it does to a linear model; this is here as a
+    stronger predictive baseline, traded off against the coefficients'
+    interpretability.
+    """
+    X = build_features(train, size, encoding)
+    model = lgb.LGBMRegressor(**{**GBM_PARAMS, **params})
+    model.fit(X, target(train))
+    return Fitted(model, size, encoding)
