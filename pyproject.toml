@@ -1,0 +1,19 @@
+[project]
+name = "diamonds"
+version = "0.1.0"
+description = "Diamond price modelling from the Kaggle diamonds dataset"
+readme = "README.md"
+authors = [
+    { name = "Amedeo Quaglieri", email = "amedeoquaglieri@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "lightgbm>=4.7.0",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "scikit-learn>=1.9.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
