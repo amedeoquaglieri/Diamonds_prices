@@ -91,6 +91,81 @@ Candidate model types, in order of complexity:
     they do, the log-carat term needs a different functional form (e.g. a
     spline or polynomial term).
 
+## Build steps
+
+Concrete, ordered steps to go from this plan to a working model. Each step
+should be a separate commit; keep this list and `CLAUDE.md` updated if the
+approach changes materially along the way.
+
+1. **Scaffold the project**
+   - Add a dependency manifest (`requirements.txt` or `pyproject.toml`):
+     pandas, numpy, scikit-learn, and a gradient-boosting library
+     (xgboost or lightgbm).
+   - Create a `src/` package (e.g. `src/diamonds/`) rather than loose
+     top-level scripts, per the working conventions in `CLAUDE.md`.
+
+2. **Data loading & cleaning** (`src/diamonds/data.py`)
+   - Load `diamonds.csv`.
+   - Apply the cleaning steps from "Data preparation" above: drop rows with
+     a zero x/y/z dimension, drop the implausible-y/z decimal-point-typo
+     rows, deduplicate exact duplicates, drop extreme depth/table rows.
+   - Return the cleaned ~53,766-row DataFrame, plus a carat-band column
+     (0.2–0.4, 0.4–0.7, 0.7–1.0, 1.0–1.5, 1.5+) used later for
+     stratification and the bucketed comparison.
+
+3. **Feature engineering** (`src/diamonds/features.py`)
+   - Derive `log(carat)` and `log(price)`.
+   - Ordinal-encode `cut`, `color`, `clarity` (worst→best); also build a
+     one-hot-encoded variant of each for comparison against the ordinal
+     encoding.
+   - Assemble feature-set variants to compare: (a) `log(carat)` + `depth` +
+     `table` + 4Cs, and (b) `x`/`y`/`z` + `depth` + `table` + 4Cs — never
+     carat and x/y/z together, to avoid multicollinearity.
+
+4. **Train/test split** (`src/diamonds/split.py` or inline in a training
+   script)
+   - 80/20 split, stratified by carat band.
+
+5. **Baseline: linear regression on log(price)**
+   - Fit OLS on `log(price) ~ log(carat) + cut + color + clarity + depth +
+     table` (ordinal encoding first).
+   - Record coefficients and metrics (see Evaluation plan).
+
+6. **Regularized regression comparison**
+   - Fit Ridge/Lasso on the same target, including the x/y/z feature-set
+     variant, to check how it handles the multicollinearity that plain OLS
+     can't.
+
+7. **Gradient-boosted trees**
+   - Fit XGBoost or LightGBM on `log(price)` with both feature-set variants.
+   - Compute feature importances and partial-dependence plots for
+     cut/color/clarity.
+
+8. **Carat-bucketed comparison (sanity check)**
+   - Compute mean price and price-per-carat by cut/color/clarity within each
+     carat band (generalizing the ~1 ct slice from the EDA across the full
+     range).
+   - Compare its direction/shape against the regression and tree
+     coefficients — they should agree once carat is controlled for.
+
+9. **Evaluation**
+   - Compute RMSE, MAE (back-transformed to price) and R² (log-price) for
+     every model above, overall and broken out by carat band.
+   - Check the sanity checks from "Evaluation plan": monotonic
+     cut/color/clarity effect, no strong residual-vs-carat trend.
+
+10. **Compare and select a final model**
+    - Summarize metrics and interpretability tradeoffs across the linear,
+      regularized, and tree models; pick (or ensemble) a final model with a
+      stated rationale.
+
+11. **Write up results**
+    - Produce a results report (mirroring `planning/report.html`'s format)
+      covering final metrics, coefficients/importances, and the sanity
+      checks.
+    - Update `planning/PLAN.md` and `CLAUDE.md` if anything changed from
+      this plan during implementation.
+
 ## Open questions for you
 
 - Preferred model type to start with — plain interpretable regression, or
