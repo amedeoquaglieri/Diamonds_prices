@@ -134,14 +134,29 @@ invariant it establishes (see "Testing" below); keep this list and
    - Tests: split sizes, no row appearing in both sides, carat-band
      proportions preserved across train and test.
 
-5. **Baseline: linear regression on log(price)**
+5. **Baseline: linear regression on log(price)** — done
+   (`src/diamonds/models.py`, `src/diamonds/metrics.py`)
    - Fit OLS on `log(price) ~ log(carat) + cut + color + clarity + depth +
      table` (ordinal encoding first).
    - Record coefficients and metrics (see Evaluation plan).
-   - Tests: the fitted `log(carat)` coefficient is positive and near the
-     ~1.68 exponent the EDA found, and the cut/color/clarity coefficients
+   - Tests: the fitted `log(carat)` coefficient is positive and in a wide
+     band around the EDA estimate, and the cut/color/clarity coefficients
      come out positive (better grade, higher price) now that carat is in
      the model — the confound check, as a test rather than a manual look.
+
+   Result: the confound reverses as predicted. Grade coefficients are all
+   positive (clarity +0.122, color +0.078, cut +0.030 per grade step), and
+   under one-hot encoding — which tells the model nothing about grade order
+   — every grade's coefficients still come out monotonically worst→best.
+   Test R² 0.979 on log price, RMSE $923, MAE $461.
+
+   One correction to this plan's expectation: the fitted `log(carat)`
+   coefficient is **1.88, not 1.68**. The 1.68 figure was the
+   *unconditional* log-log slope, which is biased downward by the same
+   confound seen from the other side — higher-grade stones skew smaller, so
+   leaving grades out understates how steeply price climbs with carat.
+   Controlling for them raises the elasticity. The test therefore asserts a
+   wide band (1.5-2.2) rather than pinning 1.68.
 
 6. **Regularized regression comparison**
    - Fit Ridge/Lasso on the same target, including the x/y/z feature-set

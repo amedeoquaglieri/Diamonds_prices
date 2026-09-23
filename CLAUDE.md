@@ -8,9 +8,10 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **build steps 1-4 of `planning/PLAN.md` are done** (project
-scaffold, data loading and cleaning, feature engineering, train/test split).
-No model code yet.
+Current state: **build steps 1-5 of `planning/PLAN.md` are done** (project
+scaffold, data cleaning, feature engineering, train/test split, and the OLS
+baseline). Remaining: regularized regression, gradient-boosted trees, the
+carat-bucketed comparison, evaluation and write-up.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.
@@ -21,7 +22,9 @@ No model code yet.
 - `src/diamonds/` — package code. `data.py` loads and cleans the dataset;
   `features.py` builds the feature-set variants (size: carat or x/y/z;
   grade encoding: ordinal or one-hot) and the log-price target; `split.py`
-  holds the shared carat-band-stratified train/test split.
+  holds the shared carat-band-stratified train/test split; `models.py` fits
+  estimators (paired with their feature variant via `Fitted`); `metrics.py`
+  scores predictions.
 - `tests/` — pytest suite, one module per source module.
 
 ## Commands
