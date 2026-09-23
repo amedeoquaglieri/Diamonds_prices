@@ -94,17 +94,18 @@ Candidate model types, in order of complexity:
 ## Build steps
 
 Concrete, ordered steps to go from this plan to a working model. Each step
-should be a separate commit; keep this list and `CLAUDE.md` updated if the
-approach changes materially along the way.
+should be a separate commit, and each step ships with tests covering the
+invariant it establishes (see "Testing" below); keep this list and
+`CLAUDE.md` updated if the approach changes materially along the way.
 
-1. **Scaffold the project**
+1. **Scaffold the project** — done
    - Add a dependency manifest (`requirements.txt` or `pyproject.toml`):
      pandas, numpy, scikit-learn, and a gradient-boosting library
-     (xgboost or lightgbm).
+     (xgboost or lightgbm). Add `pytest` as a dev dependency.
    - Create a `src/` package (e.g. `src/diamonds/`) rather than loose
      top-level scripts, per the working conventions in `CLAUDE.md`.
 
-2. **Data loading & cleaning** (`src/diamonds/data.py`)
+2. **Data loading & cleaning** (`src/diamonds/data.py`) — done
    - Load `diamonds.csv`.
    - Apply the cleaning steps from "Data preparation" above: drop rows with
      a zero x/y/z dimension, drop the implausible-y/z decimal-point-typo
@@ -112,6 +113,9 @@ approach changes materially along the way.
    - Return the cleaned ~53,766-row DataFrame, plus a carat-band column
      (0.2–0.4, 0.4–0.7, 0.7–1.0, 1.0–1.5, 1.5+) used later for
      stratification and the bucketed comparison.
+   - Tests: cleaned row count, no bad rows surviving any of the four
+     cleaning rules, grade categoricals in worst→best order, every row
+     banded, every band populated enough to stratify on.
 
 3. **Feature engineering** (`src/diamonds/features.py`)
    - Derive `log(carat)` and `log(price)`.
@@ -121,15 +125,24 @@ approach changes materially along the way.
    - Assemble feature-set variants to compare: (a) `log(carat)` + `depth` +
      `table` + 4Cs, and (b) `x`/`y`/`z` + `depth` + `table` + 4Cs — never
      carat and x/y/z together, to avoid multicollinearity.
+   - Tests: log transforms invert back to the original values, ordinal codes
+     follow the worst→best order, one-hot columns match the grade levels,
+     and no feature-set variant contains both carat and x/y/z.
 
 4. **Train/test split** (`src/diamonds/split.py` or inline in a training
    script)
    - 80/20 split, stratified by carat band.
+   - Tests: split sizes, no row appearing in both sides, carat-band
+     proportions preserved across train and test.
 
 5. **Baseline: linear regression on log(price)**
    - Fit OLS on `log(price) ~ log(carat) + cut + color + clarity + depth +
      table` (ordinal encoding first).
    - Record coefficients and metrics (see Evaluation plan).
+   - Tests: the fitted `log(carat)` coefficient is positive and near the
+     ~1.68 exponent the EDA found, and the cut/color/clarity coefficients
+     come out positive (better grade, higher price) now that carat is in
+     the model — the confound check, as a test rather than a manual look.
 
 6. **Regularized regression comparison**
    - Fit Ridge/Lasso on the same target, including the x/y/z feature-set
@@ -153,6 +166,10 @@ approach changes materially along the way.
      every model above, overall and broken out by carat band.
    - Check the sanity checks from "Evaluation plan": monotonic
      cut/color/clarity effect, no strong residual-vs-carat trend.
+   - Tests: metric functions return known values on a small hand-built
+     example (especially the log→price back-transformation, which is easy
+     to get subtly wrong), and each model clears a loose R² floor so a
+     future refactor that silently breaks training fails the suite.
 
 10. **Compare and select a final model**
     - Summarize metrics and interpretability tradeoffs across the linear,
@@ -165,6 +182,30 @@ approach changes materially along the way.
       checks.
     - Update `planning/PLAN.md` and `CLAUDE.md` if anything changed from
       this plan during implementation.
+
+## Testing
+
+Tests live in `tests/`, one module per source module (`tests/test_data.py`
+covers `src/diamonds/data.py`). Run them with `uv run pytest`, and run the
+suite before committing each build step.
+
+What is worth testing here, and what isn't:
+
+- **Do test the data contract.** The cleaning rules, grade ordering and
+  carat banding are assumptions every later step silently depends on; a
+  test is what stops a subtle change to one of them from quietly biasing a
+  model later on.
+- **Do test the findings the model must reproduce.** The EDA's central
+  claim is that quality grades look *backwards* until carat is controlled
+  for. Asserting the fitted coefficients come out in the right direction
+  turns that from a thing we looked at once into a thing that stays true.
+- **Do test transformations that are easy to get quietly wrong**, above all
+  the log(price)→price back-transformation used for RMSE and MAE.
+- **Don't pin exact metric values.** Assert loose floors (e.g. R² above a
+  clearly-passing threshold) so the suite catches a broken pipeline without
+  failing every time a hyperparameter or library version shifts a digit.
+- **Don't mock the dataset.** It is a fixed 3MB file that loads in under a
+  second; tests read the real thing, so they check the real data.
 
 ## Open questions for you
 

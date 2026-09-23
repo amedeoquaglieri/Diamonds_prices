@@ -8,14 +8,26 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **exploratory analysis and planning only — no model code has
-been implemented yet.**
+Current state: **build steps 1-2 of `planning/PLAN.md` are done** (project
+scaffold, data loading and cleaning). No model code yet.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.
-- `planning/PLAN.md` — the modeling plan derived from that EDA. Read this
-  file in full before writing any model code; it is the source of truth for
-  *why* the approach below is structured this way.
+- `planning/PLAN.md` — the modeling plan derived from that EDA, including
+  the ordered build steps and the testing conventions. Read this file in
+  full before writing any model code; it is the source of truth for *why*
+  the approach below is structured this way.
+- `src/diamonds/` — package code. `data.py` loads and cleans the dataset.
+- `tests/` — pytest suite, one module per source module.
+
+## Commands
+
+This project uses `uv`. Never call `python`/`pip` directly.
+
+- `uv sync` — install dependencies.
+- `uv run pytest` — run the test suite.
+- `uv run python <script>` — run a script inside the project environment.
+- `uv add <pkg>` / `uv add --dev <pkg>` — add a runtime / dev dependency.
 
 ## Key findings from the EDA/plan (see `planning/PLAN.md` for detail)
 
@@ -76,14 +88,27 @@ price step between grades isn't necessarily linear.
   direction once carat is controlled for; residuals vs. carat should not
   show a strong remaining trend.
 
+## Testing
+
+See "Testing" in `planning/PLAN.md` for the full rationale. In short:
+
+- Every build step ships with tests; run `uv run pytest` before committing.
+- Tests read the real `diamonds.csv` — it is small and fixed, so don't mock
+  it.
+- Test the data contract (cleaning rules, grade ordering, carat banding) and
+  the EDA findings the model must reproduce, above all that cut/color/
+  clarity coefficients come out in the *right* direction once carat is
+  controlled for.
+- Assert loose metric floors, not exact values, so the suite catches a
+  broken pipeline without breaking on a hyperparameter or version change.
+
 ## Working conventions
 
-- There is no established source layout, package structure, or dependency
-  manifest yet — when adding the first model code, choose a conventional,
-  minimal structure (e.g. a `src/` or top-level package plus a
-  `requirements.txt`/`pyproject.toml`) rather than inferring one from
-  nonexistent precedent, and keep it consistent thereafter.
+- Source layout: `src/diamonds/` package, `tests/` mirroring it one module
+  per source module, dependencies in `pyproject.toml` managed with `uv`.
+  Keep to this structure.
 - Keep `planning/PLAN.md` and this file in sync: if the modeling approach
-  changes materially during implementation, update both.
+  changes materially during implementation, update both — including
+  marking build steps done as they land.
 - Don't modify `planning/report.html` or `diamonds.csv`; they are fixed
   inputs (the EDA report and raw dataset, respectively).
