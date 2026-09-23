@@ -8,10 +8,15 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **build steps 1-5 of `planning/PLAN.md` are done** (project
-scaffold, data cleaning, feature engineering, train/test split, and the OLS
-baseline). Remaining: regularized regression, gradient-boosted trees, the
-carat-bucketed comparison, evaluation and write-up.
+Current state: **build steps 1-6 of `planning/PLAN.md` are done** (project
+scaffold, data cleaning, feature engineering, train/test split, the OLS
+baseline and the regularized comparison). Remaining: gradient-boosted trees,
+the carat-bucketed comparison, evaluation and write-up.
+
+Two results so far that contradict the original plan, both explained in
+`planning/PLAN.md`: the controlled carat elasticity is 1.88 rather than the
+unconditional 1.68, and regularization gains nothing over plain OLS at this
+sample size.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.

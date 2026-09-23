@@ -8,9 +8,15 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LassoCV, LinearRegression, RidgeCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from diamonds.features import build_features, target
+
+RIDGE_ALPHAS = np.logspace(-3, 3, 13)
+CV_FOLDS = 5
+LASSO_MAX_ITER = 50_000
 
 
 @dataclass(frozen=True)
@@ -26,10 +32,24 @@ class Fitted:
         return self.estimator.predict(build_features(df, self.size, self.encoding))
 
     def coefficients(self) -> pd.Series:
-        """Fitted coefficients, named by feature."""
-        return pd.Series(
-            self.estimator.coef_, index=self.estimator.feature_names_in_
-        ).sort_values(ascending=False)
+        """Fitted coefficients, in the original feature units.
+
+        Regularized models are fitted on standardized features, so their raw
+        coefficients are per standard deviation. Dividing by the scale puts
+        every model's coefficients on the same footing as the OLS baseline.
+        """
+        final = self.estimator[-1] if isinstance(self.estimator, Pipeline) else self.estimator
+        values = final.coef_
+        if isinstance(self.estimator, Pipeline):
+            values = values / self.estimator.named_steps["scaler"].scale_
+        return pd.Series(values, index=self.estimator.feature_names_in_).sort_values(
+            ascending=False
+        )
+
+    @property
+    def alpha(self) -> float:
+        """The regularization strength chosen by cross-validation."""
+        return self.estimator[-1].alpha_
 
 
 def fit_linear(
@@ -42,3 +62,41 @@ def fit_linear(
     """
     X = build_features(train, size, encoding)
     return Fitted(LinearRegression().fit(X, target(train)), size, encoding)
+
+
+def _fit_scaled(train: pd.DataFrame, size: str, encoding: str, regressor) -> Fitted:
+    """Fit a regularized regressor on standardized features.
+
+    Regularization penalizes coefficient size, so it is only meaningful once
+    the features share a scale.
+    """
+    pipeline = Pipeline([("scaler", StandardScaler()), ("regressor", regressor)])
+    X = build_features(train, size, encoding)
+    return Fitted(pipeline.fit(X, target(train)), size, encoding)
+
+
+def fit_ridge(
+    train: pd.DataFrame, size: str = "carat", encoding: str = "ordinal"
+) -> Fitted:
+    """Fit ridge regression, choosing alpha by cross-validation.
+
+    Ridge shrinks correlated features together rather than picking between
+    them, which is what the near-collinear x/y/z variant needs.
+    """
+    return _fit_scaled(train, size, encoding, RidgeCV(alphas=RIDGE_ALPHAS))
+
+
+def fit_lasso(
+    train: pd.DataFrame, size: str = "carat", encoding: str = "ordinal"
+) -> Fitted:
+    """Fit lasso regression, choosing alpha by cross-validation.
+
+    Lasso drives redundant coefficients to zero, so it shows which of the
+    correlated size features it considers dispensable.
+    """
+    return _fit_scaled(
+        train,
+        size,
+        encoding,
+        LassoCV(cv=CV_FOLDS, random_state=0, max_iter=LASSO_MAX_ITER),
+    )

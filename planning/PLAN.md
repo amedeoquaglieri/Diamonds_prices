@@ -158,10 +158,33 @@ invariant it establishes (see "Testing" below); keep this list and
    Controlling for them raises the elasticity. The test therefore asserts a
    wide band (1.5-2.2) rather than pinning 1.68.
 
-6. **Regularized regression comparison**
+6. **Regularized regression comparison** — done (`src/diamonds/models.py`)
    - Fit Ridge/Lasso on the same target, including the x/y/z feature-set
      variant, to check how it handles the multicollinearity that plain OLS
      can't.
+   - Both fit on standardized features (regularization is scale-sensitive);
+     `Fitted.coefficients()` divides the scaling back out so every model's
+     coefficients stay comparable with the OLS baseline.
+
+   Result: **regularization turns out not to be needed here, and this step's
+   premise was wrong.** Ridge reproduces the OLS fit to four decimals on
+   every variant (test RMSE $922.78 vs $922.78; predictions agree within
+   0.01 log units), and cross-validation picks small alphas (0.1-1.0).
+
+   The premise was that near-collinear x/y/z (r>=0.97) would destabilize OLS.
+   It doesn't, because n=43,012 against at most 22 features leaves plenty of
+   information to separate them. Refitting on 10 bootstrap resamples gives
+   OLS coefficient standard deviations of x 0.048 / y 0.061 / z 0.103 —
+   no worse than ridge's 0.052 / 0.062 / 0.133. Collinearity inflates
+   variance, but not enough to matter at this sample size.
+
+   Lasso is slightly *worse* than OLS (RMSE $823.84 vs $773.85 on the best
+   variant): with no excess variance to trade away, shrinkage only costs
+   signal. It does zero out `table` on the carat variant, agreeing with the
+   EDA that table carries almost no price information.
+
+   Implication for step 10: prefer the simpler OLS. Regularization earns
+   nothing on this dataset.
 
 7. **Gradient-boosted trees**
    - Fit XGBoost or LightGBM on `log(price)` with both feature-set variants.
