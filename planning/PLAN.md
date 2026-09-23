@@ -129,8 +129,7 @@ invariant it establishes (see "Testing" below); keep this list and
      follow the worst→best order, one-hot columns match the grade levels,
      and no feature-set variant contains both carat and x/y/z.
 
-4. **Train/test split** (`src/diamonds/split.py` or inline in a training
-   script)
+4. **Train/test split** (`src/diamonds/split.py`) — done
    - 80/20 split, stratified by carat band.
    - Tests: split sizes, no row appearing in both sides, carat-band
      proportions preserved across train and test.
