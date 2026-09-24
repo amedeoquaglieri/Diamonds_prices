@@ -235,15 +235,29 @@ invariant it establishes (see "Testing" below); keep this list and
    smallest band) — which is exactly why this step checks a correlation
    per band rather than requiring a strict worst-to-best ordering.
 
-9. **Evaluation**
-   - Compute RMSE, MAE (back-transformed to price) and R² (log-price) for
-     every model above, overall and broken out by carat band.
-   - Check the sanity checks from "Evaluation plan": monotonic
-     cut/color/clarity effect, no strong residual-vs-carat trend.
-   - Tests: metric functions return known values on a small hand-built
-     example (especially the log→price back-transformation, which is easy
-     to get subtly wrong), and each model clears a loose R² floor so a
-     future refactor that silently breaks training fails the suite.
+9. **Evaluation** — done (`src/diamonds/metrics.py`)
+   - `score_by_band` computes RMSE, MAE and R² (see `score`) separately
+     within each carat band; `residual_carat_correlation` checks the
+     second sanity check from "Evaluation plan" directly — the Spearman
+     correlation between carat and the log-scale residual, which should be
+     small if the log-carat term has fully captured the size effect.
+     (The first sanity check, monotonic cut/color/clarity direction, was
+     already covered by steps 5, 7 and 8, each by a different method.)
+   - Tests: hand-built examples for both new functions (including one that
+     would come out backwards under alphabetical rather than category
+     band ordering), plus every real model (OLS, ridge, lasso, GBM) checked
+     against a loose per-band R² floor and a residual-carat correlation
+     ceiling.
+
+   Result: no model shows a meaningful residual-carat trend (all four sit
+   at 0.06–0.07 Spearman correlation, well under the 0.2 test ceiling) —
+   the log-carat term is doing its job. Per-band R² is markedly lower than
+   the headline score (e.g. GBM: 0.69–0.86 by band vs 0.991 overall),
+   which is expected rather than a problem: most of the overall R² comes
+   from carat itself, and that barely varies within a band. RMSE rises
+   from the smallest to the largest band (all models), simply because a
+   fixed percentage error is a bigger dollar error on a bigger stone, not
+   because any model fits large stones worse in relative terms.
 
 10. **Compare and select a final model**
     - Summarize metrics and interpretability tradeoffs across the linear,

@@ -8,17 +8,21 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **build steps 1-8 of `planning/PLAN.md` are done** (project
+Current state: **build steps 1-9 of `planning/PLAN.md` are done** (project
 scaffold, data cleaning, feature engineering, train/test split, the OLS
-baseline, the regularized comparison, gradient-boosted trees, and the
-carat-bucketed sanity check). Remaining: evaluation and write-up.
+baseline, the regularized comparison, gradient-boosted trees, the
+carat-bucketed sanity check, and the full evaluation). Remaining: final
+model selection and write-up.
 
 Results so far that contradict the original plan, all explained in
 `planning/PLAN.md`: the controlled carat elasticity is 1.88 rather than the
 unconditional 1.68, regularization gains nothing over plain OLS at this
 sample size, LightGBM clearly beats OLS (RMSE $529 vs $923) rather than just
 matching it, and cut's effect is noisy enough that a non-model check needs
-a correlation rather than a strict worst-to-best ordering to see it.
+a correlation rather than a strict worst-to-best ordering to see it. No
+model shows a residual-vs-carat trend, and per-band R² is markedly lower
+than the headline score for every model — expected, since most of the
+overall R² is carat itself, which barely varies within a band.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.
@@ -31,7 +35,8 @@ a correlation rather than a strict worst-to-best ordering to see it.
   grade encoding: ordinal or one-hot) and the log-price target; `split.py`
   holds the shared carat-band-stratified train/test split; `models.py` fits
   estimators (paired with their feature variant via `Fitted`), including
-  the LightGBM baseline; `metrics.py` scores predictions; `interpret.py`
+  the LightGBM baseline; `metrics.py` scores predictions, overall and by
+  carat band, and checks for a residual-carat trend; `interpret.py`
   computes partial dependence for the tree model, standing in for the
   coefficients a linear model reads directly; `bucketed.py` is the
   non-model carat-bucketed sanity check (mean price-per-carat and its rank
