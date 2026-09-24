@@ -8,16 +8,16 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **build steps 1-10 of `planning/PLAN.md` are done** (project
-scaffold, data cleaning, feature engineering, train/test split, the OLS
-baseline, the regularized comparison, gradient-boosted trees, the
-carat-bucketed sanity check, the full evaluation, and final model
-selection). Remaining: write-up.
+Current state: **all 11 build steps of `planning/PLAN.md` are done.** The
+project is complete: EDA (`planning/report.html`), plan and build history
+(`planning/PLAN.md`), package + tests (`src/diamonds/`, `tests/`), and
+results write-up (`planning/results.html`).
 
 The selected final model is **LightGBM, carat + ordinal encoding**
 (`src/diamonds/final.py`): RMSE $529 vs the best linear model's $774 (OLS,
 one-hot) — see "Compare and select a final model" in `planning/PLAN.md` for
-the full 16-combination comparison table and rationale.
+the full 16-combination comparison table and rationale, and
+`planning/results.html` for the same numbers as charts.
 
 Results so far that contradict the original plan, all explained in
 `planning/PLAN.md`: the controlled carat elasticity is 1.88 rather than the
@@ -34,6 +34,10 @@ final pick.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.
+- `planning/results.html` — the final write-up: model comparison, feature
+  importances, partial dependence, the carat-bucketed check and the OLS
+  coefficients, as charts. Regenerate by re-running the scripts described
+  in `planning/PLAN.md` step 11 if the underlying numbers change.
 - `planning/PLAN.md` — the modeling plan derived from that EDA, including
   the ordered build steps and the testing conventions. Read this file in
   full before writing any model code; it is the source of truth for *why*

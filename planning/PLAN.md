@@ -319,12 +319,22 @@ invariant it establishes (see "Testing" below); keep this list and
       their predictions would only pull GBM's accuracy toward OLS's for no
       offsetting benefit.
 
-11. **Write up results**
-    - Produce a results report (mirroring `planning/report.html`'s format)
-      covering final metrics, coefficients/importances, and the sanity
-      checks.
-    - Update `planning/PLAN.md` and `CLAUDE.md` if anything changed from
-      this plan during implementation.
+11. **Write up results** — done (`planning/results.html`)
+    - A results report mirroring `planning/report.html`'s format: the
+      16-combination model comparison, the final model's feature
+      importances, partial dependence for cut/color/clarity, the
+      carat-bucketed correlation (by-band bars against a pooled reference
+      line), per-band error, and the OLS coefficients as the readable
+      companion explanation — the same numbers documented above, as
+      charts rather than prose.
+    - `planning/PLAN.md` and `CLAUDE.md` are already in sync as of each
+      prior step; no changes to the modeling approach were needed here.
+
+All eleven build steps are now done. The project's deliverables are:
+`src/diamonds/` (the package, with a full pytest suite — run
+`uv run pytest`), `planning/report.html` (the EDA), and
+`planning/results.html` (the model results). `diamonds.final.fit_final`
+is the single entry point for the recommended model.
 
 ## Testing
 

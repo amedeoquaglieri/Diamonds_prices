@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Diamond price model &mdash; results</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --muted:          #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6;
+    --success-text:   #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted:          #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1:       #3987e5;
+      --success-text:   #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted:          #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --series-1:       #3987e5;
+    --success-text:   #0ca30c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; }
+  header.hero h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  header.hero p.lede { color: var(--text-secondary); font-size: 15px; line-height: 1.55; max-width: 66ch; margin: 0 0 24px; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+  .stat-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-tile .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-tile .value { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .stat-tile .value.small { font-size: 15px; }
+
+  section { margin-top: 44px; }
+  h2 { font-size: 19px; margin: 0 0 6px; }
+  p.section-note { color: var(--text-secondary); font-size: 14px; line-height: 1.6; max-width: 70ch; margin: 0 0 18px; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card-title { font-size: 13px; color: var(--text-secondary); margin: 0 0 8px; font-weight: 600; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  .chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .baseline { stroke: var(--baseline); stroke-width: 1; }
+  .reference-line { stroke: var(--muted); stroke-width: 1.5; cursor: pointer; }
+  .reference-label { font-size: 10px; fill: var(--muted); font-style: italic; }
+  .axis-label { font-size: 10.5px; fill: var(--muted); }
+  .axis-label-rot { font-size: 9.5px; fill: var(--muted); }
+  .bar-value { font-size: 11px; fill: var(--text-primary); font-weight: 600; }
+  .mark-bar, .mark-cell { cursor: pointer; transition: opacity .12s ease; }
+  .mark-bar:hover { opacity: 0.82; }
+  .mark-bar-final { stroke: var(--text-primary); stroke-width: 1.5; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--text-secondary); }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  ul.findings { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; color: var(--text-primary); }
+  ul.findings li { margin-bottom: 6px; }
+  ul.findings b { font-weight: 600; }
+
+  table.coef-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.coef-table th, table.coef-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  table.coef-table th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  table.coef-table td.num { font-variant-numeric: tabular-nums; }
+  .positive { color: var(--success-text); font-weight: 600; }
+
+  footer { margin-top: 52px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 50;
+    background: var(--text-primary); color: var(--surface-1);
+    font-size: 12px; padding: 5px 9px; border-radius: 6px;
+    opacity: 0; transform: translate(-50%, -100%); transition: opacity .08s ease;
+    white-space: nowrap; font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Diamond price model &mdash; results</h1>
+  <p class="lede">Follows on from <a href="report.html">the EDA</a> and <a href="PLAN.md">the plan</a>: sixteen
+  model &times; feature-variant combinations were compared, and this is the final pick, its accuracy, and the
+  checks that confirm it actually captures the 4Cs' effect rather than an artifact of carat.</p>
+
+  <div class="stat-row">
+    <div class="stat-tile"><div class="label">Final model</div><div class="value small">LightGBM, carat + ordinal</div></div>
+    <div class="stat-tile"><div class="label">Test RMSE</div><div class="value">$529</div></div>
+    <div class="stat-tile"><div class="label">Test R&sup2; (log)</div><div class="value">0.991</div></div>
+    <div class="stat-tile"><div class="label">Residual&ndash;carat corr.</div><div class="value">0.06</div></div>
+  </div>
+</header>
+
+<section id="comparison">
+  <h2>Choosing the final model</h2>
+  <p class="section-note">Every model type (OLS, ridge, lasso, LightGBM) fit on every feature-set variant
+  (carat or x/y/z; ordinal or one-hot grades), sorted by test RMSE. LightGBM wins outright regardless of
+  variant &mdash; the gap to the best linear model (OLS, one-hot) is larger than the gap between any two
+  linear models. The selected combination (carat + ordinal) is outlined.</p>
+  <div class="card">
+    <svg viewBox="0 0 680 560" class="chart-svg" role="img" aria-label="RMSE by model and feature variant"><line x1="18" y1="326.5" x2="662" y2="326.5" class="gridline"/><text x="12" y="330.5" class="axis-label" text-anchor="end">$519</text><line x1="18" y1="223.0" x2="662" y2="223.0" class="gridline"/><text x="12" y="227.0" class="axis-label" text-anchor="end">$1,039</text><line x1="18" y1="119.5" x2="662" y2="119.5" class="gridline"/><text x="12" y="123.5" class="axis-label" text-anchor="end">$1,558</text><line x1="18" y1="16.0" x2="662" y2="16.0" class="gridline"/><text x="12" y="20.0" class="axis-label" text-anchor="end">$2,078</text><line x1="18" y1="430.0" x2="662" y2="430.0" class="baseline"/><rect x="22.4" y="324.5" width="31.4" height="105.5" rx="3" fill="#eda100" class="mark-bar mark-bar-final" data-tip="LightGBM · carat · ordinal: RMSE $529, R² 0.991"/><text x="38.1" y="316.5" class="bar-value" text-anchor="middle">selected</text><text x="38.1" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 38.1 446.0)">carat ordinal</text><rect x="62.7" y="323.0" width="31.4" height="107.0" rx="3" fill="#eda100" class="mark-bar" data-tip="LightGBM · dimensions · ordinal: RMSE $537, R² 0.992"/><text x="78.4" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 78.4 446.0)">x/y/z ordinal</text><rect x="102.9" y="317.3" width="31.4" height="112.7" rx="3" fill="#eda100" class="mark-bar" data-tip="LightGBM · carat · one-hot: RMSE $566, R² 0.990"/><text x="118.6" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 118.6 446.0)">carat 1-hot</text><rect x="143.2" y="314.7" width="31.4" height="115.3" rx="3" fill="#eda100" class="mark-bar" data-tip="LightGBM · dimensions · one-hot: RMSE $579, R² 0.991"/><text x="158.9" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 158.9 446.0)">x/y/z 1-hot</text><rect x="183.4" y="275.8" width="31.4" height="154.2" rx="3" fill="#2a78d6" class="mark-bar" data-tip="OLS · carat · one-hot: RMSE $774, R² 0.983"/><text x="199.1" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 199.1 446.0)">carat 1-hot</text><rect x="223.7" y="275.8" width="31.4" height="154.2" rx="3" fill="#eb6834" class="mark-bar" data-tip="Ridge · carat · one-hot: RMSE $774, R² 0.983"/><text x="239.4" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 239.4 446.0)">carat 1-hot</text><rect x="263.9" y="265.8" width="31.4" height="164.2" rx="3" fill="#1baf7a" class="mark-bar" data-tip="Lasso · carat · one-hot: RMSE $824, R² 0.982"/><text x="279.6" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 279.6 446.0)">carat 1-hot</text><rect x="304.2" y="246.1" width="31.4" height="183.9" rx="3" fill="#2a78d6" class="mark-bar" data-tip="OLS · carat · ordinal: RMSE $923, R² 0.979"/><text x="319.9" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 319.9 446.0)">carat ordinal</text><rect x="344.4" y="246.1" width="31.4" height="183.9" rx="3" fill="#eb6834" class="mark-bar" data-tip="Ridge · carat · ordinal: RMSE $923, R² 0.979"/><text x="360.1" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 360.1 446.0)">carat ordinal</text><rect x="384.7" y="245.6" width="31.4" height="184.4" rx="3" fill="#1baf7a" class="mark-bar" data-tip="Lasso · carat · ordinal: RMSE $926, R² 0.979"/><text x="400.4" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 400.4 446.0)">carat ordinal</text><rect x="424.9" y="100.3" width="31.4" height="329.7" rx="3" fill="#eb6834" class="mark-bar" data-tip="Ridge · dimensions · one-hot: RMSE $1,654, R² 0.974"/><text x="440.6" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 440.6 446.0)">x/y/z 1-hot</text><rect x="465.2" y="100.3" width="31.4" height="329.7" rx="3" fill="#2a78d6" class="mark-bar" data-tip="OLS · dimensions · one-hot: RMSE $1,654, R² 0.974"/><text x="480.9" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 480.9 446.0)">x/y/z 1-hot</text><rect x="505.4" y="91.7" width="31.4" height="338.3" rx="3" fill="#1baf7a" class="mark-bar" data-tip="Lasso · dimensions · one-hot: RMSE $1,698, R² 0.973"/><text x="521.1" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 521.1 446.0)">x/y/z 1-hot</text><rect x="545.7" y="54.6" width="31.4" height="375.4" rx="3" fill="#1baf7a" class="mark-bar" data-tip="Lasso · dimensions · ordinal: RMSE $1,884, R² 0.969"/><text x="561.4" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 561.4 446.0)">x/y/z ordinal</text><rect x="585.9" y="53.6" width="31.4" height="376.4" rx="3" fill="#2a78d6" class="mark-bar" data-tip="OLS · dimensions · ordinal: RMSE $1,889, R² 0.969"/><text x="601.6" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 601.6 446.0)">x/y/z ordinal</text><rect x="626.2" y="53.6" width="31.4" height="376.4" rx="3" fill="#eb6834" class="mark-bar" data-tip="Ridge · dimensions · ordinal: RMSE $1,889, R² 0.969"/><text x="641.9" y="446.0" class="axis-label-rot" text-anchor="end" transform="rotate(-55 641.9 446.0)">x/y/z ordinal</text></svg>
+    <div class="legend"><span class="legend-item"><span class="swatch" style="background:#2a78d6"></span>OLS</span><span class="legend-item"><span class="swatch" style="background:#eb6834"></span>Ridge</span><span class="legend-item"><span class="swatch" style="background:#1baf7a"></span>Lasso</span><span class="legend-item"><span class="swatch" style="background:#eda100"></span>LightGBM</span></div>
+  </div>
+</section>
+
+<section id="importance">
+  <h2>What the final model actually uses</h2>
+  <p class="section-note">Feature importance (how often LightGBM splits on each feature). Carat dominates, as
+  every step of this project found; clarity and color follow, matching their strength in the partial-dependence
+  and carat-bucketed checks below. Table and depth &mdash; the cut-proportion measurements &mdash; contribute least,
+  echoing the EDA's weak direct correlation for both.</p>
+  <div class="card">
+    <svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">0</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">259</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">518</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">777</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">1,036</text><line x1="18" y1="248.0" x2="542" y2="248.0" class="baseline"/><rect x="30.2" y="63.3" width="62.9" height="184.7" rx="3" fill="#2a78d6" class="mark-bar" data-tip="log_carat: 878 splits"/><text x="61.7" y="55.3" class="bar-value" text-anchor="middle">878</text><text x="61.7" y="268.0" class="axis-label" text-anchor="middle">log_carat</text><rect x="117.6" y="104.5" width="62.9" height="143.5" rx="3" fill="#2a78d6" class="mark-bar" data-tip="clarity: 682 splits"/><text x="149.0" y="96.5" class="bar-value" text-anchor="middle">682</text><text x="149.0" y="268.0" class="axis-label" text-anchor="middle">clarity</text><rect x="204.9" y="138.8" width="62.9" height="109.2" rx="3" fill="#2a78d6" class="mark-bar" data-tip="color: 519 splits"/><text x="236.3" y="130.8" class="bar-value" text-anchor="middle">519</text><text x="236.3" y="268.0" class="axis-label" text-anchor="middle">color</text><rect x="292.2" y="158.6" width="62.9" height="89.4" rx="3" fill="#2a78d6" class="mark-bar" data-tip="depth: 425 splits"/><text x="323.7" y="150.6" class="bar-value" text-anchor="middle">425</text><text x="323.7" y="268.0" class="axis-label" text-anchor="middle">depth</text><rect x="379.6" y="193.7" width="62.9" height="54.3" rx="3" fill="#2a78d6" class="mark-bar" data-tip="cut: 258 splits"/><text x="411.0" y="185.7" class="bar-value" text-anchor="middle">258</text><text x="411.0" y="268.0" class="axis-label" text-anchor="middle">cut</text><rect x="466.9" y="197.9" width="62.9" height="50.1" rx="3" fill="#2a78d6" class="mark-bar" data-tip="table: 238 splits"/><text x="498.3" y="189.9" class="bar-value" text-anchor="middle">238</text><text x="498.3" y="268.0" class="axis-label" text-anchor="middle">table</text></svg>
+  </div>
+</section>
+
+<section id="partial-dependence">
+  <h2>The 4Cs' effect, with carat held fixed</h2>
+  <p class="section-note">Partial dependence: predicted price as each grade sweeps worst&rarr;best, everything else
+  (including carat) held at its training value. This is the tree-model equivalent of a linear coefficient &mdash;
+  and like the OLS coefficients below, it comes out monotonically increasing for all three grades once carat's
+  effect is isolated.</p>
+  <div class="grid-3">
+    <div class="card"><div class="card-title">Cut</div><svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">0</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">731</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">1,462</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">2,193</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">2,924</text><line x1="18" y1="248.0" x2="542" y2="248.0" class="baseline"/><rect x="32.7" y="77.9" width="75.5" height="170.1" rx="3" fill="#86b6ef" class="mark-bar" data-tip="Fair: $2,281 predicted (carat and other grades held fixed)"/><text x="70.4" y="69.9" class="bar-value" text-anchor="middle">$2,281</text><text x="70.4" y="268.0" class="axis-label" text-anchor="middle">Fair</text><rect x="137.5" y="76.4" width="75.5" height="171.6" rx="3" fill="#6da7ec" class="mark-bar" data-tip="Good: $2,303 predicted (carat and other grades held fixed)"/><text x="175.2" y="68.4" class="bar-value" text-anchor="middle">$2,303</text><text x="175.2" y="268.0" class="axis-label" text-anchor="middle">Good</text><rect x="242.3" y="73.4" width="75.5" height="174.6" rx="3" fill="#5598e7" class="mark-bar" data-tip="Very Good: $2,343 predicted (carat and other grades held fixed)"/><text x="280.0" y="65.4" class="bar-value" text-anchor="middle">$2,343</text><text x="280.0" y="268.0" class="axis-label" text-anchor="middle">Very Good</text><rect x="347.1" y="65.5" width="75.5" height="182.5" rx="3" fill="#3987e5" class="mark-bar" data-tip="Premium: $2,448 predicted (carat and other grades held fixed)"/><text x="384.8" y="57.5" class="bar-value" text-anchor="middle">$2,448</text><text x="384.8" y="268.0" class="axis-label" text-anchor="middle">Premium</text><rect x="451.9" y="63.3" width="75.5" height="184.7" rx="3" fill="#2a78d6" class="mark-bar" data-tip="Ideal: $2,478 predicted (carat and other grades held fixed)"/><text x="489.6" y="55.3" class="bar-value" text-anchor="middle">$2,478</text><text x="489.6" y="268.0" class="axis-label" text-anchor="middle">Ideal</text></svg></div>
+    <div class="card"><div class="card-title">Color</div><svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">0</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">836</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">1,673</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">2,509</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">3,345</text><line x1="18" y1="248.0" x2="542" y2="248.0" class="baseline"/><rect x="28.5" y="133.3" width="53.9" height="114.7" rx="3" fill="#86b6ef" class="mark-bar" data-tip="J: $1,760 predicted (carat and other grades held fixed)"/><text x="55.4" y="125.3" class="bar-value" text-anchor="middle">$1,760</text><text x="55.4" y="268.0" class="axis-label" text-anchor="middle">J</text><rect x="103.3" y="119.1" width="53.9" height="128.9" rx="3" fill="#6da7ec" class="mark-bar" data-tip="I: $1,978 predicted (carat and other grades held fixed)"/><text x="130.3" y="111.1" class="bar-value" text-anchor="middle">$1,978</text><text x="130.3" y="268.0" class="axis-label" text-anchor="middle">I</text><rect x="178.2" y="104.9" width="53.9" height="143.1" rx="3" fill="#5598e7" class="mark-bar" data-tip="H: $2,196 predicted (carat and other grades held fixed)"/><text x="205.1" y="96.9" class="bar-value" text-anchor="middle">$2,196</text><text x="205.1" y="268.0" class="axis-label" text-anchor="middle">H</text><rect x="253.1" y="91.7" width="53.9" height="156.3" rx="3" fill="#3987e5" class="mark-bar" data-tip="G: $2,398 predicted (carat and other grades held fixed)"/><text x="280.0" y="83.7" class="bar-value" text-anchor="middle">$2,398</text><text x="280.0" y="268.0" class="axis-label" text-anchor="middle">G</text><rect x="327.9" y="81.1" width="53.9" height="166.9" rx="3" fill="#2a78d6" class="mark-bar" data-tip="F: $2,561 predicted (carat and other grades held fixed)"/><text x="354.9" y="73.1" class="bar-value" text-anchor="middle">$2,561</text><text x="354.9" y="268.0" class="axis-label" text-anchor="middle">F</text><rect x="402.8" y="73.4" width="53.9" height="174.6" rx="3" fill="#256abf" class="mark-bar" data-tip="E: $2,680 predicted (carat and other grades held fixed)"/><text x="429.7" y="65.4" class="bar-value" text-anchor="middle">$2,680</text><text x="429.7" y="268.0" class="axis-label" text-anchor="middle">E</text><rect x="477.6" y="63.3" width="53.9" height="184.7" rx="3" fill="#1c5cab" class="mark-bar" data-tip="D: $2,835 predicted (carat and other grades held fixed)"/><text x="504.6" y="55.3" class="bar-value" text-anchor="middle">$2,835</text><text x="504.6" y="268.0" class="axis-label" text-anchor="middle">D</text></svg></div>
+    <div class="card"><div class="card-title">Clarity</div><svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">0</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">1,050</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">2,100</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">3,151</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">4,201</text><line x1="18" y1="248.0" x2="542" y2="248.0" class="baseline"/><rect x="27.2" y="174.4" width="47.2" height="73.6" rx="3" fill="#86b6ef" class="mark-bar" data-tip="I1: $1,419 predicted (carat and other grades held fixed)"/><text x="50.8" y="166.4" class="bar-value" text-anchor="middle">$1,419</text><text x="50.8" y="268.0" class="axis-label" text-anchor="middle">I1</text><rect x="92.7" y="151.9" width="47.2" height="96.1" rx="3" fill="#6da7ec" class="mark-bar" data-tip="SI2: $1,853 predicted (carat and other grades held fixed)"/><text x="116.2" y="143.9" class="bar-value" text-anchor="middle">$1,853</text><text x="116.2" y="268.0" class="axis-label" text-anchor="middle">SI2</text><rect x="158.2" y="136.0" width="47.2" height="112.0" rx="3" fill="#5598e7" class="mark-bar" data-tip="SI1: $2,159 predicted (carat and other grades held fixed)"/><text x="181.8" y="128.0" class="bar-value" text-anchor="middle">$2,159</text><text x="181.8" y="268.0" class="axis-label" text-anchor="middle">SI1</text><rect x="223.7" y="119.5" width="47.2" height="128.5" rx="3" fill="#3987e5" class="mark-bar" data-tip="VS2: $2,476 predicted (carat and other grades held fixed)"/><text x="247.2" y="111.5" class="bar-value" text-anchor="middle">$2,476</text><text x="247.2" y="268.0" class="axis-label" text-anchor="middle">VS2</text><rect x="289.2" y="109.4" width="47.2" height="138.6" rx="3" fill="#2a78d6" class="mark-bar" data-tip="VS1: $2,671 predicted (carat and other grades held fixed)"/><text x="312.8" y="101.4" class="bar-value" text-anchor="middle">$2,671</text><text x="312.8" y="268.0" class="axis-label" text-anchor="middle">VS1</text><rect x="354.7" y="91.9" width="47.2" height="156.1" rx="3" fill="#256abf" class="mark-bar" data-tip="VVS2: $3,007 predicted (carat and other grades held fixed)"/><text x="378.2" y="83.9" class="bar-value" text-anchor="middle">$3,007</text><text x="378.2" y="268.0" class="axis-label" text-anchor="middle">VVS2</text><rect x="420.2" y="78.5" width="47.2" height="169.5" rx="3" fill="#1c5cab" class="mark-bar" data-tip="VVS1: $3,266 predicted (carat and other grades held fixed)"/><text x="443.8" y="70.5" class="bar-value" text-anchor="middle">$3,266</text><text x="443.8" y="268.0" class="axis-label" text-anchor="middle">VVS1</text><rect x="485.7" y="63.3" width="47.2" height="184.7" rx="3" fill="#184f95" class="mark-bar" data-tip="IF: $3,560 predicted (carat and other grades held fixed)"/><text x="509.2" y="55.3" class="bar-value" text-anchor="middle">$3,560</text><text x="509.2" y="268.0" class="axis-label" text-anchor="middle">IF</text></svg></div>
+  </div>
+</section>
+
+<section id="bucketed">
+  <h2>The confound, confirmed without a model</h2>
+  <p class="section-note">Spearman correlation between grade and price-per-carat, computed separately within each
+  carat band (bars) versus pooled across all carat sizes (dashed line). Pooled, the relationship is confounded to
+  near zero &mdash; the EDA's "better quality looks cheaper" finding. Within any single band it's positive
+  throughout, confirming the model's direction by a method that doesn't fit anything.</p>
+  <div class="grid-3">
+    <div class="card"><div class="card-title">Cut</div><svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart with reference line"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">-0.03</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">0.06</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">0.14</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">0.23</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">0.31</text><line x1="18" y1="230.4" x2="542" y2="230.4" class="baseline"/><rect x="32.7" y="70.1" width="75.5" height="160.3" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.2-0.4: 0.25 (within this carat band)"/><text x="70.4" y="62.1" class="bar-value" text-anchor="middle">0.25</text><text x="70.4" y="268.0" class="axis-label" text-anchor="middle">0.2-0.4</text><rect x="137.5" y="83.4" width="75.5" height="147.0" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.4-0.7: 0.23 (within this carat band)"/><text x="175.2" y="75.4" class="bar-value" text-anchor="middle">0.23</text><text x="175.2" y="268.0" class="axis-label" text-anchor="middle">0.4-0.7</text><rect x="242.3" y="102.7" width="75.5" height="127.7" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.7-1.0: 0.20 (within this carat band)"/><text x="280.0" y="94.7" class="bar-value" text-anchor="middle">0.20</text><text x="280.0" y="268.0" class="axis-label" text-anchor="middle">0.7-1.0</text><rect x="347.1" y="89.0" width="75.5" height="141.4" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.0-1.5: 0.22 (within this carat band)"/><text x="384.8" y="81.0" class="bar-value" text-anchor="middle">0.22</text><text x="384.8" y="268.0" class="axis-label" text-anchor="middle">1.0-1.5</text><rect x="451.9" y="109.8" width="75.5" height="120.6" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.5+: 0.19 (within this carat band)"/><text x="489.6" y="101.8" class="bar-value" text-anchor="middle">0.19</text><text x="489.6" y="268.0" class="axis-label" text-anchor="middle">1.5+</text><line x1="18" y1="244.5" x2="542" y2="244.5" stroke-dasharray="4 3" class="reference-line" data-tip="pooled (confounded): -0.02"/><text x="542" y="239.5" class="reference-label" text-anchor="end">pooled (confounded)</text></svg></div>
+    <div class="card"><div class="card-title">Color</div><svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart with reference line"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">-0.04</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">0.10</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">0.24</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">0.39</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">0.53</text><line x1="18" y1="232.2" x2="542" y2="232.2" class="baseline"/><rect x="32.7" y="100.7" width="75.5" height="131.4" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.2-0.4: 0.35 (within this carat band)"/><text x="70.4" y="92.7" class="bar-value" text-anchor="middle">0.35</text><text x="70.4" y="268.0" class="axis-label" text-anchor="middle">0.2-0.4</text><rect x="137.5" y="132.0" width="75.5" height="100.2" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.4-0.7: 0.26 (within this carat band)"/><text x="175.2" y="124.0" class="bar-value" text-anchor="middle">0.26</text><text x="175.2" y="268.0" class="axis-label" text-anchor="middle">0.4-0.7</text><rect x="242.3" y="73.8" width="75.5" height="158.4" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.7-1.0: 0.42 (within this carat band)"/><text x="280.0" y="65.8" class="bar-value" text-anchor="middle">0.42</text><text x="280.0" y="268.0" class="axis-label" text-anchor="middle">0.7-1.0</text><rect x="347.1" y="82.9" width="75.5" height="149.2" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.0-1.5: 0.39 (within this carat band)"/><text x="384.8" y="74.9" class="bar-value" text-anchor="middle">0.39</text><text x="384.8" y="268.0" class="axis-label" text-anchor="middle">1.0-1.5</text><rect x="451.9" y="70.4" width="75.5" height="161.7" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.5+: 0.42 (within this carat band)"/><text x="489.6" y="62.4" class="bar-value" text-anchor="middle">0.42</text><text x="489.6" y="268.0" class="axis-label" text-anchor="middle">1.5+</text><line x1="18" y1="244.8" x2="542" y2="244.8" stroke-dasharray="4 3" class="reference-line" data-tip="pooled (confounded): -0.03"/><text x="542" y="239.8" class="reference-label" text-anchor="end">pooled (confounded)</text></svg></div>
+    <div class="card"><div class="card-title">Clarity</div><svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart with reference line"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">-0.03</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">0.23</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">0.48</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">0.73</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">0.98</text><line x1="18" y1="242.2" x2="542" y2="242.2" class="baseline"/><rect x="32.7" y="113.2" width="75.5" height="129.0" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.2-0.4: 0.60 (within this carat band)"/><text x="70.4" y="105.2" class="bar-value" text-anchor="middle">0.60</text><text x="70.4" y="268.0" class="axis-label" text-anchor="middle">0.2-0.4</text><rect x="137.5" y="116.7" width="75.5" height="125.5" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.4-0.7: 0.58 (within this carat band)"/><text x="175.2" y="108.7" class="bar-value" text-anchor="middle">0.58</text><text x="175.2" y="268.0" class="axis-label" text-anchor="middle">0.4-0.7</text><rect x="242.3" y="141.7" width="75.5" height="100.5" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.7-1.0: 0.46 (within this carat band)"/><text x="280.0" y="133.7" class="bar-value" text-anchor="middle">0.46</text><text x="280.0" y="268.0" class="axis-label" text-anchor="middle">0.7-1.0</text><rect x="347.1" y="72.4" width="75.5" height="169.8" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.0-1.5: 0.79 (within this carat band)"/><text x="384.8" y="64.4" class="bar-value" text-anchor="middle">0.79</text><text x="384.8" y="268.0" class="axis-label" text-anchor="middle">1.0-1.5</text><rect x="451.9" y="139.0" width="75.5" height="103.2" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.5+: 0.48 (within this carat band)"/><text x="489.6" y="131.0" class="bar-value" text-anchor="middle">0.48</text><text x="489.6" y="268.0" class="axis-label" text-anchor="middle">1.5+</text><line x1="18" y1="246.8" x2="542" y2="246.8" stroke-dasharray="4 3" class="reference-line" data-tip="pooled (confounded): -0.02"/><text x="542" y="241.8" class="reference-label" text-anchor="end">pooled (confounded)</text></svg></div>
+  </div>
+</section>
+
+<section id="by-band">
+  <h2>Error by carat size</h2>
+  <p class="section-note">RMSE for the final model, computed separately within each carat band. Error grows with
+  band size because a fixed percentage error is a bigger dollar error on a bigger stone, not because the model
+  fits large stones worse in relative terms &mdash; and the residual shows essentially no leftover correlation with
+  carat (0.06 Spearman), confirming the log-carat term has captured the size effect.</p>
+  <div class="card">
+    <svg viewBox="0 0 560 300" class="chart-svg" role="img" aria-label="bar chart"><line x1="18" y1="248.0" x2="542" y2="248.0" class="gridline"/><text x="12" y="252.0" class="axis-label" text-anchor="end">0</text><line x1="18" y1="193.5" x2="542" y2="193.5" class="gridline"/><text x="12" y="197.5" class="axis-label" text-anchor="end">378</text><line x1="18" y1="139.0" x2="542" y2="139.0" class="gridline"/><text x="12" y="143.0" class="axis-label" text-anchor="end">757</text><line x1="18" y1="84.5" x2="542" y2="84.5" class="gridline"/><text x="12" y="88.5" class="axis-label" text-anchor="end">1,135</text><line x1="18" y1="30.0" x2="542" y2="30.0" class="gridline"/><text x="12" y="34.0" class="axis-label" text-anchor="end">1,513</text><line x1="18" y1="248.0" x2="542" y2="248.0" class="baseline"/><rect x="32.7" y="235.5" width="75.5" height="12.5" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.2-0.4 ct: RMSE $86"/><text x="70.4" y="227.5" class="bar-value" text-anchor="middle">$86</text><text x="70.4" y="268.0" class="axis-label" text-anchor="middle">0.2-0.4</text><rect x="137.5" y="228.9" width="75.5" height="19.1" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.4-0.7 ct: RMSE $132"/><text x="175.2" y="220.9" class="bar-value" text-anchor="middle">$132</text><text x="175.2" y="268.0" class="axis-label" text-anchor="middle">0.4-0.7</text><rect x="242.3" y="206.0" width="75.5" height="42.0" rx="3" fill="#2a78d6" class="mark-bar" data-tip="0.7-1.0 ct: RMSE $291"/><text x="280.0" y="198.0" class="bar-value" text-anchor="middle">$291</text><text x="280.0" y="268.0" class="axis-label" text-anchor="middle">0.7-1.0</text><rect x="347.1" y="170.0" width="75.5" height="78.0" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.0-1.5 ct: RMSE $541"/><text x="384.8" y="162.0" class="bar-value" text-anchor="middle">$541</text><text x="384.8" y="268.0" class="axis-label" text-anchor="middle">1.0-1.5</text><rect x="451.9" y="63.3" width="75.5" height="184.7" rx="3" fill="#2a78d6" class="mark-bar" data-tip="1.5+ ct: RMSE $1,282"/><text x="489.6" y="55.3" class="bar-value" text-anchor="middle">$1,282</text><text x="489.6" y="268.0" class="axis-label" text-anchor="middle">1.5+</text></svg>
+  </div>
+</section>
+
+<section id="coefficients">
+  <h2>Reading the price mechanism directly</h2>
+  <p class="section-note">LightGBM is the predictor; OLS's coefficients (same carat + ordinal variant) remain the
+  readable explanation of the price mechanism &mdash; the reason this project didn't ensemble the two (see
+  planning/PLAN.md, step 10).</p>
+  <div class="card">
+    <table class="coef-table">
+      <thead><tr><th>Term</th><th>Coefficient</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td>log(carat)</td><td class="num positive">1.877</td><td>Price &prop; carat<sup>1.88</sup> once grades are held fixed &mdash; steeper than the EDA's unconditional 1.68</td></tr>
+        <tr><td>clarity (per grade step)</td><td class="num positive">+0.122</td><td>&times;1.130 price per step up in clarity, holding carat and the other grades fixed</td></tr>
+        <tr><td>color (per grade step)</td><td class="num positive">+0.078</td><td>&times;1.081 price per step up in color</td></tr>
+        <tr><td>cut (per grade step)</td><td class="num positive">+0.030</td><td>&times;1.031 price per step up in cut &mdash; smallest and noisiest of the three (see the carat-bucketed check above)</td></tr>
+        <tr><td>table</td><td class="num">-0.0005</td><td>Essentially zero &mdash; matches the EDA's weak table&ndash;price correlation</td></tr>
+        <tr><td>depth</td><td class="num">-0.0039</td><td>Essentially zero &mdash; same for depth</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="takeaways">
+  <h2>Takeaways</h2>
+  <div class="card">
+    <ul class="findings">
+      <li><b>LightGBM on carat + ordinal grades is the final model</b>: RMSE $529, R&sup2; 0.991, beating the best linear model (OLS, one-hot, RMSE $774) by $245.</li>
+      <li><b>Every check agrees on direction</b> once carat is controlled for: the OLS coefficients, the tree's partial dependence, and the model-free carat-bucketed correlation all show cut/color/clarity raising price &mdash; three independent methods converging on the same answer that raw averages get backwards.</li>
+      <li><b>Cut is the weakest and noisiest of the 4Cs</b> throughout: the smallest OLS coefficient, the flattest partial-dependence curve, and the only grade with non-monotonic cell means in the carat-bucketed check.</li>
+      <li><b>The model has no leftover size bias</b>: residual&ndash;carat correlation is 0.06, confirming log(carat) fully captures the size effect this whole project is about.</li>
+      <li><b>One-hot beats ordinal for every linear model</b>, a finding from the final comparison that didn't change the model choice (LightGBM wins either way) but explains why the readable OLS baseline (ordinal, for its single coefficient per grade) isn't also the most accurate linear variant.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  Source: <code>src/diamonds/</code> (this repository). Reproduce with <code>uv run pytest</code> (every claim
+  above is a test) or regenerate this page with <code>uv run python planning/build_results.py</code>. See
+  <a href="PLAN.md">planning/PLAN.md</a> for the full build history and every intermediate result.
+</footer>
+
+</div>
+<div id="tooltip"></div>
+<script>
+(function() {
+  var tip = document.getElementById('tooltip');
+  document.addEventListener('mouseover', function(e) {
+    var t = e.target.closest('[data-tip]');
+    if (!t) return;
+    tip.textContent = t.getAttribute('data-tip');
+    tip.style.opacity = '1';
+  });
+  document.addEventListener('mousemove', function(e) {
+    var t = e.target.closest('[data-tip]');
+    if (!t) { tip.style.opacity = '0'; return; }
+    tip.style.left = e.clientX + 'px';
+    tip.style.top = (e.clientY - 10) + 'px';
+  });
+  document.addEventListener('mouseout', function(e) {
+    if (e.target.closest('[data-tip]')) tip.style.opacity = '0';
+  });
+})();
+</script>
+</body>
+</html>
