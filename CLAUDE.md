@@ -8,16 +8,17 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **build steps 1-7 of `planning/PLAN.md` are done** (project
+Current state: **build steps 1-8 of `planning/PLAN.md` are done** (project
 scaffold, data cleaning, feature engineering, train/test split, the OLS
-baseline, the regularized comparison, and gradient-boosted trees). Remaining:
-the carat-bucketed comparison, evaluation and write-up.
+baseline, the regularized comparison, gradient-boosted trees, and the
+carat-bucketed sanity check). Remaining: evaluation and write-up.
 
-Three results so far that contradict the original plan, all explained in
+Results so far that contradict the original plan, all explained in
 `planning/PLAN.md`: the controlled carat elasticity is 1.88 rather than the
 unconditional 1.68, regularization gains nothing over plain OLS at this
-sample size, and LightGBM clearly beats OLS (RMSE $529 vs $923) rather than
-just matching it.
+sample size, LightGBM clearly beats OLS (RMSE $529 vs $923) rather than just
+matching it, and cut's effect is noisy enough that a non-model check needs
+a correlation rather than a strict worst-to-best ordering to see it.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.
@@ -32,7 +33,9 @@ just matching it.
   estimators (paired with their feature variant via `Fitted`), including
   the LightGBM baseline; `metrics.py` scores predictions; `interpret.py`
   computes partial dependence for the tree model, standing in for the
-  coefficients a linear model reads directly.
+  coefficients a linear model reads directly; `bucketed.py` is the
+  non-model carat-bucketed sanity check (mean price-per-carat and its rank
+  correlation with grade, within each carat band).
 - `tests/` — pytest suite, one module per source module.
 
 ## Commands

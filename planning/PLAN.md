@@ -209,12 +209,31 @@ invariant it establishes (see "Testing" below); keep this list and
    a coefficient to read: predicted price rises strictly worst-to-best for
    cut, color and clarity alike, holding carat and the other grades fixed.
 
-8. **Carat-bucketed comparison (sanity check)**
+8. **Carat-bucketed comparison (sanity check)** — done (`src/diamonds/bucketed.py`)
    - Compute mean price and price-per-carat by cut/color/clarity within each
      carat band (generalizing the ~1 ct slice from the EDA across the full
-     range).
-   - Compare its direction/shape against the regression and tree
-     coefficients — they should agree once carat is controlled for.
+     range): `bucketed_means`.
+   - Compare direction against the regression and tree models via Spearman
+     correlation between grade and price-per-carat, computed separately
+     within each band (`rank_correlation_by_band`) and pooled across bands
+     (`unbucketed_rank_correlation`) — a correlation is robust to the
+     small-sample noise that can break a strict monotonic ordering in a
+     cell or two, which a literal per-cell check could not tolerate.
+   - Tests: every band's correlation is positive for all three grades, and
+     every band's correlation beats the pooled one — the confound stated as
+     an inequality rather than a threshold, so it holds regardless of the
+     exact numbers.
+
+   Result: confirms steps 5 and 7 by a completely different method. Pooled
+   across carat, grade correlates with price-per-carat at essentially zero
+   (cut -0.02, color -0.03, clarity -0.02) — the same "quality looks
+   backwards" confound from the EDA. Within any single carat band, the same
+   correlation is positive throughout (cut 0.19-0.25, color 0.26-0.43,
+   clarity 0.47-0.79). Cut is the noisiest of the three, as the OLS
+   coefficients already suggested, and even shows non-monotonic *cell
+   means* in a couple of bands (small samples, e.g. n=59 Fair stones in the
+   smallest band) — which is exactly why this step checks a correlation
+   per band rather than requiring a strict worst-to-best ordering.
 
 9. **Evaluation**
    - Compute RMSE, MAE (back-transformed to price) and R² (log-price) for
