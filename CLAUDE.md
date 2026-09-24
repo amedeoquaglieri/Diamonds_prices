@@ -8,21 +8,29 @@ This repo builds a model of diamond price from the Kaggle diamonds dataset
 (`diamonds.csv`, 53,940 rows, columns: `carat`, `cut`, `color`, `clarity`,
 `depth`, `table`, `price`, `x`, `y`, `z`).
 
-Current state: **build steps 1-9 of `planning/PLAN.md` are done** (project
+Current state: **build steps 1-10 of `planning/PLAN.md` are done** (project
 scaffold, data cleaning, feature engineering, train/test split, the OLS
 baseline, the regularized comparison, gradient-boosted trees, the
-carat-bucketed sanity check, and the full evaluation). Remaining: final
-model selection and write-up.
+carat-bucketed sanity check, the full evaluation, and final model
+selection). Remaining: write-up.
+
+The selected final model is **LightGBM, carat + ordinal encoding**
+(`src/diamonds/final.py`): RMSE $529 vs the best linear model's $774 (OLS,
+one-hot) — see "Compare and select a final model" in `planning/PLAN.md` for
+the full 16-combination comparison table and rationale.
 
 Results so far that contradict the original plan, all explained in
 `planning/PLAN.md`: the controlled carat elasticity is 1.88 rather than the
 unconditional 1.68, regularization gains nothing over plain OLS at this
 sample size, LightGBM clearly beats OLS (RMSE $529 vs $923) rather than just
-matching it, and cut's effect is noisy enough that a non-model check needs
-a correlation rather than a strict worst-to-best ordering to see it. No
-model shows a residual-vs-carat trend, and per-band R² is markedly lower
-than the headline score for every model — expected, since most of the
-overall R² is carat itself, which barely varies within a band.
+matching it, cut's effect is noisy enough that a non-model check needs a
+correlation rather than a strict worst-to-best ordering to see it, no model
+shows a residual-vs-carat trend, per-band R² is markedly lower than the
+headline score for every model (expected — most of the overall R² is carat
+itself), and one-hot beats ordinal encoding for every linear model (an OLS
+coefficient can only fit a single slope across grades; one-hot lets it
+learn each grade's step separately) even though it doesn't change the
+final pick.
 
 - `diamonds.csv` — raw dataset.
 - `planning/report.html` — exploratory data analysis (EDA) of the dataset.
@@ -40,7 +48,9 @@ overall R² is carat itself, which barely varies within a band.
   computes partial dependence for the tree model, standing in for the
   coefficients a linear model reads directly; `bucketed.py` is the
   non-model carat-bucketed sanity check (mean price-per-carat and its rank
-  correlation with grade, within each carat band).
+  correlation with grade, within each carat band); `final.py` is the
+  selected final model (`fit_final`) — LightGBM on carat + ordinal
+  encoding.
 - `tests/` — pytest suite, one module per source module.
 
 ## Commands

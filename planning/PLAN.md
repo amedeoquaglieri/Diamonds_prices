@@ -259,10 +259,65 @@ invariant it establishes (see "Testing" below); keep this list and
    fixed percentage error is a bigger dollar error on a bigger stone, not
    because any model fits large stones worse in relative terms.
 
-10. **Compare and select a final model**
+10. **Compare and select a final model** — done (`src/diamonds/final.py`)
     - Summarize metrics and interpretability tradeoffs across the linear,
-      regularized, and tree models; pick (or ensemble) a final model with a
-      stated rationale.
+      regularized, and tree models; pick a final model with a stated
+      rationale.
+    - Tests: the final model uses the chosen feature variant, beats every
+      linear/regularized model's *best* variant (not just the ordinal ones
+      used elsewhere in the suite), and clears a tighter accuracy floor
+      than the individual-model tests — it's supposed to be the best, not
+      merely acceptable.
+
+    All 16 model × variant combinations, test set, sorted by RMSE:
+
+    | model  | size       | encoding | RMSE   | MAE    | R² (log) |
+    |--------|------------|----------|-------:|-------:|---------:|
+    | gbm    | carat      | ordinal  | $529   | $275   | 0.9907   |
+    | gbm    | dimensions | ordinal  | $537   | $279   | 0.9915   |
+    | gbm    | carat      | one-hot  | $566   | $292   | 0.9900   |
+    | gbm    | dimensions | one-hot  | $579   | $297   | 0.9907   |
+    | ols    | carat      | one-hot  | $774   | $397   | 0.9829   |
+    | ridge  | carat      | one-hot  | $774   | $397   | 0.9829   |
+    | lasso  | carat      | one-hot  | $824   | $416   | 0.9821   |
+    | ols    | carat      | ordinal  | $923   | $461   | 0.9791   |
+    | ridge  | carat      | ordinal  | $923   | $461   | 0.9791   |
+    | lasso  | carat      | ordinal  | $926   | $463   | 0.9790   |
+    | ridge  | dimensions | one-hot  | $1,654 | $620   | 0.9738   |
+    | ols    | dimensions | one-hot  | $1,654 | $620   | 0.9738   |
+    | lasso  | dimensions | one-hot  | $1,698 | $628   | 0.9729   |
+    | lasso  | dimensions | ordinal  | $1,884 | $690   | 0.9685   |
+    | ols    | dimensions | ordinal  | $1,889 | $691   | 0.9685   |
+    | ridge  | dimensions | ordinal  | $1,889 | $691   | 0.9685   |
+
+    A finding this table adds beyond steps 5-7: **one-hot beats ordinal for
+    every linear model**, on both size variants (e.g. OLS carat: $774
+    one-hot vs $923 ordinal) — a linear model can only use an ordinal grade
+    through a single slope, forcing equal price steps between adjacent
+    grades, while one-hot lets it learn each grade's step separately. This
+    doesn't change the final pick (GBM still wins outright either way), but
+    it means the ordinal-encoded OLS baseline from step 5 was chosen for
+    its readable coefficient, not because it was the best *linear* model.
+
+    **Selected: LightGBM, carat + ordinal encoding**
+    (`final.fit_final`). Rationale:
+    - Best or near-best accuracy of all 16 combinations (RMSE $529, only
+      $8 above the single best variant, dimensions+ordinal at $537 — well
+      within noise, and carat is the simpler, single-column size feature).
+    - Beats every linear/regularized model's *best* variant (one-hot,
+      $774) by a wide margin, not just the ordinal ones.
+    - No sensitivity to the ordinal-vs-one-hot or carat-vs-dimensions
+      choices that materially move the linear models — trees split on
+      whatever's useful regardless of encoding.
+    - Interpretability is not sacrificed: `interpret.partial_dependence`
+      (step 7) already gives a direct, tested read on each grade's price
+      effect, which is what this project needed the coefficients for in
+      the first place.
+    - Not ensembled with OLS: OLS's coefficients remain useful as the
+      human-readable *explanation* of the price mechanism (elasticity,
+      grade premiums) alongside GBM as the *predictor* — but averaging
+      their predictions would only pull GBM's accuracy toward OLS's for no
+      offsetting benefit.
 
 11. **Write up results**
     - Produce a results report (mirroring `planning/report.html`'s format)
